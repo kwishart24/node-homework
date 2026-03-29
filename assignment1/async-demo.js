@@ -62,3 +62,16 @@ const doFileOperations = async () => {
 doFileOperations();
 
 // 3. Async/Await style
+const { promisify } = require("util");
+const fnWithPromise = promisify(fs.readFile);
+
+async function doSomething() {
+  try {
+    const result = await fnWithPromise("./sample-files/sample.txt");
+    console.log("Async/Await read: ", result.toString());
+  } catch (err) {
+    console.log("An error occurred.", err);
+  }
+}
+
+doSomething();
