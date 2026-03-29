@@ -41,14 +41,13 @@ const { once } = require("events");
 
 const newLargeFile = fs.createWriteStream("./sample-files/largefile.txt");
 
-function readChunk(path, { start = 0, end = 50 }) {
+function readChunk(path, { highWaterMark = 1024 }) {
   return new Promise((resolve, reject) => {
     const rs = createReadStream("./sample-files/largefile.txt", {
-      start: 0,
-      end: 50,
+      highWaterMark: 1024,
     });
     let collected = "";
-    rs.on("data", (chunk) => (collected += chunk));
+    rs.on("data", (chunk) => (collected += chunk.toString("utf8")));
     rs.on("end", () => resolve(collected));
     rs.on("error", reject);
   });
