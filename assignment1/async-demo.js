@@ -48,4 +48,17 @@ fs.readFile("./sample-files/sample.txt", { encoding: "utf8" }, (err, data) => {
 
 // 2. Promise style
 
+const fsp = require("fs/promises");
+
+const doFileOperations = async () => {
+  try {
+    const fileHandle = await fsp.readFile("./sample-files/sample.txt");
+    console.log("Promise read: ", fileHandle.toString());
+  } catch (err) {
+    console.log("An error occurred.", err);
+  }
+};
+
+doFileOperations();
+
 // 3. Async/Await style
