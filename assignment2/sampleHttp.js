@@ -60,7 +60,7 @@ const server = http.createServer({ keepAliveTimeout: 60000 }, (req, res) => {
       }),
     );
   } else if (req.url === "/timePage") {
-    res.writeHead(200, { "Content-Type": "text/html" });
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(htmlString);
   } else {
     res.writeHead(200, { "Content-Type": "application/json" });
