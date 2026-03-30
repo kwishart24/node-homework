@@ -5,6 +5,10 @@ app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
 
+app.post("/testpost", (req, res) => {
+  res.send("Created successfully!");
+});
+
 app.use((req, res) => {
   console.log(`You can't do a ${req.method} for ${req.url}`);
   if (!res.headersSent) {
@@ -20,6 +24,7 @@ const server = app.listen(port, () =>
   console.log(`Server is listening on port ${port}...`),
 );
 
+//Exiting cleanly
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
     console.error(`Port ${port} is already in use.`);
