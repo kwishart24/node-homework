@@ -41,15 +41,29 @@ const { once } = require("events");
 
 const newLargeFile = fs.createWriteStream("./sample-files/largefile.txt");
 
-function readChunk(path, { highWaterMark = 1024 }) {
+function readChunk(path, { highWaterMark = 512, maxChars = 40 }) {
   return new Promise((resolve, reject) => {
     const rs = createReadStream("./sample-files/largefile.txt", {
-      highWaterMark: 1024,
+      highWaterMark,
     });
     let collected = "";
-    rs.on("data", (chunk) => (collected += chunk.toString("utf8")));
-    rs.on("end", () => resolve(collected));
+
     rs.on("error", reject);
+    rs.on("end", () => resolve(collected));
+    rs.on("data", (chunk) => {
+      let text = chunk.toString("utf8");
+      let remaining = maxChars - collected.length;
+      let take = Math.min(text.length, remaining);
+
+      collected += text.slice(0, take);
+
+      remaining -= take;
+
+      if (remaining <= 0) {
+        rs.destroy();
+        resolve(collected);
+      }
+    });
   });
 }
 
@@ -62,7 +76,10 @@ async function createLargeFile() {
 
     await once(newLargeFile, "finish");
 
-    const snippet = await readChunk("./sample-files/largefile.txt", 0, 50);
+    const snippet = await readChunk("./sample-files/largefile.txt", {
+      maxChars: 40,
+      highWaterMark: 512,
+    });
     console.log("Read chunk: ", snippet);
   } catch (err) {
     console.log("An error occurred.", err);
