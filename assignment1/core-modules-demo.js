@@ -8,6 +8,8 @@ if (!fs.existsSync(sampleFilesDir)) {
   fs.mkdirSync(sampleFilesDir, { recursive: true });
 }
 
+const largeFilePath = path.join(sampleFilesDir, "largefile.txt");
+
 // OS module
 const platform = os.platform();
 const cpu = os.cpus();
@@ -16,7 +18,7 @@ const memory = os.totalmem();
 console.log("Platform: ", platform);
 console.log("CPU: ", cpu[0].model);
 console.log("Total Memory: ", memory);
-// Path module
+// // Path module
 console.log("Joined path: ", sampleFilesDir);
 // fs.promises API
 const createNewFile = async () => {
@@ -39,20 +41,20 @@ createNewFile();
 const { createReadStream } = require("fs");
 const { once } = require("events");
 
-const newLargeFile = fs.createWriteStream("./sample-files/largefile.txt");
+const newLargeFile = fs.createWriteStream(largeFilePath);
 
 function readChunk(path, { highWaterMark = 512, maxChars = 40 }) {
   return new Promise((resolve, reject) => {
-    const rs = createReadStream("./sample-files/largefile.txt", {
+    const rs = createReadStream(largeFilePath, {
       highWaterMark,
     });
     let collected = "";
+    let remaining = maxChars - collected.length;
 
     rs.on("error", reject);
-    rs.on("end", () => resolve(collected));
+    //rs.on("end", () => resolve(collected));
     rs.on("data", (chunk) => {
       let text = chunk.toString("utf8");
-      let remaining = maxChars - collected.length;
       let take = Math.min(text.length, remaining);
 
       collected += text.slice(0, take);
@@ -76,7 +78,7 @@ async function createLargeFile() {
 
     await once(newLargeFile, "finish");
 
-    const snippet = await readChunk("./sample-files/largefile.txt", {
+    const snippet = await readChunk(largeFilePath, {
       maxChars: 40,
       highWaterMark: 512,
     });
