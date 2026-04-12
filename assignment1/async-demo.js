@@ -1,16 +1,28 @@
 const fs = require("fs");
-const path = require("path");
+//const path = require("path");
 
 // Write a sample file for demonstration
 
 // 1. Callback style
 
-fs.readFile("./sample-files/sample.txt", { encoding: "utf8" }, (err, data) => {
+fs.writeFile("./sample-files/sample.txt", "Hello, async world!", (err) => {
   if (err) {
     console.log("file open failed: ", err.message);
   } else {
-    //const string = data.toString();
-    console.log("Callback read: ", data);
+    console.log("File created successfully!");
+
+    fs.readFile(
+      "./sample-files/sample.txt",
+      { encoding: "utf8" },
+      (err, data) => {
+        if (err) {
+          console.log("file open failed: ", err.message);
+        } else {
+          //const string = data.toString();
+          console.log("Callback read: ", data);
+        }
+      },
+    );
   }
 });
 
