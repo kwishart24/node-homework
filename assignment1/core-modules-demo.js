@@ -10,6 +10,8 @@ if (!fs.existsSync(sampleFilesDir)) {
 
 const largeFilePath = path.join(sampleFilesDir, "largefile.txt");
 
+const demoFilePath = path.join(sampleFilesDir, "demo.txt");
+
 // OS module
 const platform = os.platform();
 const cpu = os.cpus();
@@ -23,9 +25,9 @@ console.log("Joined path: ", sampleFilesDir);
 // fs.promises API
 const createNewFile = async () => {
   try {
-    await fsp.writeFile("./sample-files/demo.txt", "Hello from fs.promises!");
+    await fsp.writeFile(demoFilePath, "Hello from fs.promises!");
 
-    const reading = await fsp.readFile("./sample-files/demo.txt", {
+    const reading = await fsp.readFile(demoFilePath, {
       encoding: "utf-8",
     });
 
