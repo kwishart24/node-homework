@@ -1,6 +1,17 @@
 const express = require("express");
 const app = express();
 
+// Wiring to userControllers for registration of new users
+const { register } = require("./controllers/userController");
+
+// Globals for user storage in Memory Store
+global.user_id = null;
+global.users = [];
+global.tasks = [];
+
+// Express provided middleware
+app.use(express.json({ limit: "1kb" }));
+
 app.use((req, res, next) => {
   console.log(req.method, req.path, req.query);
   next();
@@ -10,9 +21,11 @@ app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
 
-app.post("/testpost", (req, res) => {
-  res.send("Created successfully!");
-});
+// POST Route
+app.post("/api/users/register", register);
+// app.post("/testpost", (req, res) => {
+//   res.send("Created successfully!");
+// });
 
 app.use((req, res) => {
   console.log(`You can't do a ${req.method} for ${req.url}`);
