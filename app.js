@@ -1,16 +1,22 @@
 const express = require("express");
 const app = express();
 
+// Wiring for Router to controller for POST
+const userRouter = require("./routes/userRoutes");
+// Express provided middleware which provides parsing
+app.use(express.json({ limit: "1kb" }));
+
 // Wiring to userControllers for registration of new users
-const { register } = require("./controllers/userController");
+// const { register } = require("./controllers/userController");
+// // // POST Route
+// app.post("/api/users/register", register);
+
+app.use("/api/users", userRouter);
 
 // Globals for user storage in Memory Store
 global.user_id = null;
 global.users = [];
 global.tasks = [];
-
-// Express provided middleware
-app.use(express.json({ limit: "1kb" }));
 
 app.use((req, res, next) => {
   console.log(req.method, req.path, req.query);
@@ -18,11 +24,9 @@ app.use((req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello, World!");
+  res.json({ message: "everything worked!" });
 });
 
-// POST Route
-app.post("/api/users/register", register);
 // app.post("/testpost", (req, res) => {
 //   res.send("Created successfully!");
 // });
