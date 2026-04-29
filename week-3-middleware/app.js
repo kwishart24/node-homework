@@ -6,7 +6,7 @@ const dogsRouter = require("./routes/dogs");
 const app = express();
 
 // Your middleware here
-
+app.use(express.json({ limit: "1kb" }));
 
 app.use("/", dogsRouter); // Do not remove this line
 
