@@ -21,25 +21,20 @@ app.use((req, res, next) => {
 
 //Check ever request if it's a POST request
 app.use((req, res, next) => {
-  if (req.method !== "POST") {
-    return next();
+  if (req.method === "POST") {
+    const contentType = req.get("Content-Type");
+    if (!contentType || !contentType.includes("application/json")) {
+      return res.status(400).json({
+        error: "Content-Type must be application/json",
+        requestId: req.requestId,
+      });
+    }
   }
-  // Content-Type Validator
-  const contentType = req.headers["content-type"] || "";
-
-  // If no content-type not application/json, send back 400 (BAD_REQUEST)
-  if (!contentType.includes("application/json")) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      error: "Invalid Content-Type; expected application/json",
-      requestId: req.requestId,
-    });
-  }
-  //If OK continue
   next();
 });
 
 // Parse JSON body
-app.use(express.json({ limit: "1kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 // GET Request for dog images (I got this code from AirHub)
 // Creates HTML page to show dog images
@@ -89,34 +84,29 @@ app.use("/images", express.static(imagesDir));
 // Mount Routes
 app.use("/", dogsRouter); // Do not remove this line
 
-// Catching any uncaught errors
-app.use((err, req, res, next) => {
-  res.status(500).json({
-    error: "Internal Server Error",
-    requestId: req.requestId,
-  });
-});
-
 // 404 Handler for unmatched paths
 app.use((req, res) => {
-  res.status(404).json({ error: "Not Found", requestId: req.requestId });
+  res.status(404).json({ error: "Route Not Found", requestId: req.requestId });
 });
 
 //Error Handlers
 app.use((err, req, res, next) => {
-  // Figure out the right HTTP status code
-  const status = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
+  // Determine the status code from the error
+  const statusCode = err.statusCode || 500;
 
-  //Log different severity
-  if (status >= 500) {
-    console.error(err);
+  // Log based on error type
+  if (statusCode >= 400 && statusCode < 500) {
+    // 4xx errors: client errors (use console.warn)
+    // This includes ValidationError (400), UnauthorizedError (401), NotFoundError (404)
+    console.warn(`WARN: ${err.name}`, err.message);
   } else {
-    console.warn(err);
+    // 5xx errors: server errors (use console.error)
+    console.error(`ERROR: Error`, err.message);
   }
 
-  // Send back clean JSON response
-  res.status(status).json({
-    error: err.message,
+  // Send error response
+  res.status(statusCode).json({
+    error: err.message || "Internal Server Error",
     requestId: req.requestId,
   });
 });
