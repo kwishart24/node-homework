@@ -15,13 +15,15 @@ app.use((req, res, next) => {
   req.requestId = uuidv4();
   res.setHeader("X-Request-Id", req.requestId);
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}]: ${req.method} ${req.path} ${req.requestId}`);
+  console.log(`[${timestamp}]: ${req.method} ${req.path} (${req.requestId})`);
   next();
 });
 
 //Check ever request if it's a POST request
 app.use((req, res, next) => {
-  if (req.method === "POST") {
+  if (req.method !== "POST") {
+    next();
+  } else {
     const contentType = req.get("Content-Type");
     if (!contentType || !contentType.includes("application/json")) {
       return res.status(400).json({
@@ -30,6 +32,22 @@ app.use((req, res, next) => {
       });
     }
   }
+  next();
+});
+
+// Add security headers
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  next();
+});
+
+// Add CORS headers
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
 });
 
@@ -75,6 +93,7 @@ app.get("/images", (req, res, next) => {
 
     // send the HTML
     res.send(html);
+    
   });
 });
 
@@ -86,7 +105,7 @@ app.use("/", dogsRouter); // Do not remove this line
 
 // 404 Handler for unmatched paths
 app.use((req, res) => {
-  res.status(404).json({ error: "Route Not Found", requestId: req.requestId });
+  res.status(404).json({ error: "Route not found", requestId: req.requestId });
 });
 
 //Error Handlers
@@ -98,17 +117,15 @@ app.use((err, req, res, next) => {
   if (statusCode >= 400 && statusCode < 500) {
     // 4xx errors: client errors (use console.warn)
     // This includes ValidationError (400), UnauthorizedError (401), NotFoundError (404)
-    console.warn(`WARN: ${err.name}`, err.message);
-  } else {
-    // 5xx errors: server errors (use console.error)
-    console.error(`ERROR: Error`, err.message);
+    console.warn(`WARN: ${err.name}: ${err.message}`);
   }
 
   // Send error response
   res.status(statusCode).json({
-    error: err.message || "Internal Server Error",
+    error: statusCode >= 500 ? "Internal Server Error" : err.message,
     requestId: req.requestId,
   });
+  next();
 });
 
 const server = app.listen(3000, () =>
