@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 //Check ever request if it's a POST request
 app.use((req, res, next) => {
   if (req.method !== "POST") {
-    next();
+    return next();
   } else {
     const contentType = req.get("Content-Type");
     if (!contentType || !contentType.includes("application/json")) {
@@ -93,8 +93,8 @@ app.get("/images", (req, res, next) => {
 
     // send the HTML
     res.send(html);
-    
   });
+  res.status(200).json({ message: "Success" });
 });
 
 // For static image URLs
@@ -118,6 +118,8 @@ app.use((err, req, res, next) => {
     // 4xx errors: client errors (use console.warn)
     // This includes ValidationError (400), UnauthorizedError (401), NotFoundError (404)
     console.warn(`WARN: ${err.name}: ${err.message}`);
+  } else {
+    console.error(`ERROR: ${err.name}: ${err.message}`);
   }
 
   // Send error response
@@ -125,7 +127,6 @@ app.use((err, req, res, next) => {
     error: statusCode >= 500 ? "Internal Server Error" : err.message,
     requestId: req.requestId,
   });
-  next();
 });
 
 const server = app.listen(3000, () =>
