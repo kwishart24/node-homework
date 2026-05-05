@@ -1,15 +1,11 @@
 const express = require("express");
 const app = express();
+const authMiddleware = require("./middleware/auth");
 
 // Wiring for Router to controller for POST
 const userRouter = require("./routes/userRoutes");
 // Express provided middleware which provides parsing
 app.use(express.json({ limit: "1kb" }));
-
-// Wiring to userControllers for registration of new users
-// const { register } = require("./controllers/userController");
-// // // POST Route
-// app.post("/api/users/register", register);
 
 app.use("/api/users", userRouter);
 
@@ -22,6 +18,10 @@ app.use((req, res, next) => {
   console.log(req.method, req.path, req.query);
   next();
 });
+
+//TaskRouter with authMiddleware
+const taskRouter = require("./routers/taskRoutes");
+app.use("/api/tasks", authMiddleware, taskRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "everything worked!" });
