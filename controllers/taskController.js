@@ -1,4 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
+const { patchTaskSchema, taskSchema } = require("../validation/taskSchema");
 
 // Task Counter
 const taskCounter = (() => {
@@ -11,15 +12,24 @@ const taskCounter = (() => {
 
 // Create function
 function createTask(req, res) {
+  if (!req.body) req.body = {};
+
+  const { error, value } = taskSchema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    return res.status(400).json({ message: error.message });
+  }
+
   const newTask = {
-    ...req.body,
+    ...value,
+    title: value.title,
     id: taskCounter(),
     userId: global.user_id.email,
   };
   global.tasks.push(newTask);
-  const { userId, ...sanitizedTask } = newTask;
+  const { userId: _drop, ...sanitizedTask } = newTask;
   // we don't send back the userId! This statement removes it.
-  res.json(sanitizedTask);
+  res.status(StatusCodes.CREATED).json(sanitizedTask);
 }
 
 // Read Function
@@ -41,6 +51,16 @@ function getTaskList(req, res) {
 
 // Update Function
 function updateTask(req, res) {
+  if (!req.body) req.body = {};
+
+  const { error, value } = patchTaskSchema.validate(req.body, {
+    abortEarly: false,
+  });
+
+  if (error) {
+    return res.status(400).json({ message: error.message });
+  }
+
   const userId = req.user.id;
   const taskId = Number(req.params.id);
   const userTasks = global.tasks.filter((t) => t.userId === req.user.id);
@@ -65,7 +85,7 @@ function updateTask(req, res) {
       .status(StatusCodes.NOT_FOUND)
       .json({ message: "task not found." });
   }
-  Object.assign(currentTask, req.body);
+  Object.assign(currentTask, value);
 
   const { userId: _drop, ...sanitizedTask } = currentTask;
   return res.status(StatusCodes.OK).json(sanitizedTask);

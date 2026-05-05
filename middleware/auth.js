@@ -1,10 +1,12 @@
 const { StatusCodes } = require("http-status-codes");
 
-Function((req, res, next) => {
+function authMiddleware(req, res, next) {
   if (global.use_id === null) {
     return res
       .status(StatusCodes.UNAUTHORIZED)
-      .json({ meessage: "unauthorized" });
+      .json({ message: "unauthorized" });
   }
   next();
-});
+}
+
+module.exports = authMiddleware;

@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 });
 
 //TaskRouter with authMiddleware
-const taskRouter = require("./routers/taskRoutes");
+const taskRouter = require("./routes/taskRoutes");
 app.use("/api/tasks", authMiddleware, taskRouter);
 
 app.get("/", (req, res) => {
