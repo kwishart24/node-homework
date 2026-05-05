@@ -1,18 +1,35 @@
 const express = require("express");
 const app = express();
 
+// Wiring for Router to controller for POST
+const userRouter = require("./routes/userRoutes");
+// Express provided middleware which provides parsing
+app.use(express.json({ limit: "1kb" }));
+
+// Wiring to userControllers for registration of new users
+// const { register } = require("./controllers/userController");
+// // // POST Route
+// app.post("/api/users/register", register);
+
+app.use("/api/users", userRouter);
+
+// Globals for user storage in Memory Store
+global.user_id = null;
+global.users = [];
+global.tasks = [];
+
 app.use((req, res, next) => {
   console.log(req.method, req.path, req.query);
   next();
 });
 
 app.get("/", (req, res) => {
-  res.send("Hello, World!");
+  res.json({ message: "everything worked!" });
 });
 
-app.post("/testpost", (req, res) => {
-  res.send("Created successfully!");
-});
+// app.post("/testpost", (req, res) => {
+//   res.send("Created successfully!");
+// });
 
 app.use((req, res) => {
   console.log(`You can't do a ${req.method} for ${req.url}`);
@@ -26,7 +43,9 @@ app.use(errorHandler);
 
 const port = process.env.PORT || 3000;
 const server = app.listen(port, () =>
-  console.log(`Server is listening on port ${port}...`),
+  console.log(
+    `Server is listening on port ${port}...http://localhost:${port}/`,
+  ),
 );
 
 //Exiting cleanly

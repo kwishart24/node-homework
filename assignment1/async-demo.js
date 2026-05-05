@@ -1,5 +1,5 @@
 const fs = require("fs");
-const path = require("path");
+//const path = require("path");
 
 // Write a sample file for demonstration
 
