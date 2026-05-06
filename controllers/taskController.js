@@ -11,7 +11,7 @@ const taskCounter = (() => {
 })();
 
 // Create function
-function createTask(req, res) {
+function create(req, res) {
   if (!req.body) req.body = {};
 
   const { error, value } = taskSchema.validate(req.body, { abortEarly: false });
@@ -27,13 +27,13 @@ function createTask(req, res) {
     userId: global.user_id.email,
   };
   global.tasks.push(newTask);
-  const { userId: _drop, ...sanitizedTask } = newTask;
+  const { userId:_drop...sanitizedTask } = newTask;
   // we don't send back the userId! This statement removes it.
   res.status(StatusCodes.CREATED).json(sanitizedTask);
 }
 
-// Read Function
-function getTaskList(req, res) {
+// Read/Index Function
+function index(req, res) {
   const userTasks = global.tasks.filter(
     (task) => task.userId === global.user_id.email,
   );
@@ -47,6 +47,25 @@ function getTaskList(req, res) {
     return sanitizedTask;
   });
   return res.status(StatusCodes.OK).json(sanitizedTasks);
+}
+
+// Show Function
+function show(req, res) {
+  const userTasks = global.tasks.filter(
+    (task) => task.userId === global.user_id.email,
+  );
+  if (userTasks.length === 0) {
+    return res
+      .status(StatusCodes.NOT_FOUND)
+      .json({ message: "User has no tasks." });
+  }
+  const requestedTask = userTasks.filter((t) => t.id === req.params.id);
+
+  const sanitizedTask = requestedTask.map((task) => {
+    const { userId: _drop, ...sanitizedTask } = task;
+    return sanitizedTask;
+  });
+  return res.status(StatusCodes.OK).json(sanitizedTask);
 }
 
 // Update Function
@@ -118,8 +137,9 @@ function deleteTask(req, res) {
 }
 
 module.exports = {
-  getTaskList,
+  index,
+  show,
   updateTask,
   deleteTask,
-  createTask,
+  create,
 };

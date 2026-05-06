@@ -83,7 +83,7 @@ async function logon(req, res, body) {
       .json({ error: "Authentication Failed" });
   } else {
     // If successful, make the user logged in and the current user
-    global.user_id = foundUser.id;
+    global.user_id = foundUser;
     return res
       .status(StatusCodes.OK)
       .json({ name: foundUser.name, email: foundUser.email });
