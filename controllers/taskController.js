@@ -25,10 +25,10 @@ function create(req, res) {
     title: value.title,
     id: taskCounter(),
     userId: global.user_id.email,
+    isCompleted: false,
   };
   global.tasks.push(newTask);
-  const { userId:_drop...sanitizedTask } = newTask;
-  // we don't send back the userId! This statement removes it.
+  const { userId, ...sanitizedTask } = newTask;
   res.status(StatusCodes.CREATED).json(sanitizedTask);
 }
 
@@ -43,7 +43,7 @@ function index(req, res) {
       .json({ message: "User has no tasks." });
   }
   const sanitizedTasks = userTasks.map((task) => {
-    const { userId: _drop, ...sanitizedTask } = task;
+    const { userId, ...sanitizedTask } = task;
     return sanitizedTask;
   });
   return res.status(StatusCodes.OK).json(sanitizedTasks);
@@ -62,14 +62,14 @@ function show(req, res) {
   const requestedTask = userTasks.filter((t) => t.id === req.params.id);
 
   const sanitizedTask = requestedTask.map((task) => {
-    const { userId: _drop, ...sanitizedTask } = task;
+    const { userId, ...sanitizedTask } = task;
     return sanitizedTask;
   });
   return res.status(StatusCodes.OK).json(sanitizedTask);
 }
 
 // Update Function
-function updateTask(req, res) {
+function update(req, res) {
   if (!req.body) req.body = {};
 
   const { error, value } = patchTaskSchema.validate(req.body, {
@@ -80,9 +80,11 @@ function updateTask(req, res) {
     return res.status(400).json({ message: error.message });
   }
 
-  const userId = req.user.id;
+  const userId = global.user_id.email;
   const taskId = Number(req.params.id);
-  const userTasks = global.tasks.filter((t) => t.userId === req.user.id);
+  const userTasks = global.tasks.filter(
+    (t) => t.userId === global.user_id.email,
+  );
 
   if (Number.isNaN(taskId) || taskId < 1) {
     return res
@@ -139,7 +141,7 @@ function deleteTask(req, res) {
 module.exports = {
   index,
   show,
-  updateTask,
+  update,
   deleteTask,
   create,
 };

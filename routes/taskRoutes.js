@@ -6,13 +6,13 @@ const {
   index,
   show,
   deleteTask,
-  updateTask,
+  update,
 } = require("../controllers/taskController");
 
 taskRouter.route("/").post(create);
 taskRouter.route("/").get(index);
 taskRouter.route("/:id").get(show);
 taskRouter.route("/:id").delete(deleteTask);
-taskRouter.route("/:id").patch(updateTask);
+taskRouter.route("/:id").patch(update);
 
 module.exports = taskRouter;
