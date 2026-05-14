@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const imagesDir = path.join(__dirname, "public", "images");
 const dogsRouter = require("./routes/dogs");
-const { StatusCodes } = require("http-status-codes");
+//const { StatusCodes } = require("http-status-codes");
 
 const app = express();
 
