@@ -9,3 +9,7 @@ SELECT orders.order_id, SUM(price * quantity) AS total_price FROM orders FULL OU
 ## 5a - Task 2:
 SELECT c.customer_name, AVG(t.order_total) AS average_order_price FROM customers AS c 
 JOIN (SELECT o.customer_id, SUM(p.price * li.quantity) AS order_total FROM orders AS o JOIN line_items AS li ON o.order_id = li.order_id JOIN products AS p ON li.product_id = p.product_id GROUP BY o.customer_id, o.order_id) AS t ON c.customer_id = t.customer_id GROUP BY c.customer_id, c.customer_name ORDER BY c.customer_name;
+
+## 5a - Task 3:
+SELECT c.customer_id, c.customer_name FROM customers AS c WHERE c.customer_name = 'Perez and Sons';
+SELECT e.employee_id FROM employees AS e WHERE e.first_name = 'Miranda' AND e.last_name = 'Harris';
