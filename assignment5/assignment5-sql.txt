@@ -13,3 +13,7 @@ JOIN (SELECT o.customer_id, SUM(p.price * li.quantity) AS order_total FROM order
 ## 5a - Task 3:
 SELECT c.customer_id, c.customer_name FROM customers AS c WHERE c.customer_name = 'Perez and Sons';
 SELECT e.employee_id FROM employees AS e WHERE e.first_name = 'Miranda' AND e.last_name = 'Harris';
+SELECT p.product_id FROM products AS p ORDER BY p.price ASC LIMIT 5;
+BEGIN;
+INSERT INTO orders AS o (customer_id, order_date, total_amount) VALUES() RETURNING o.order_id INTO :order_id; INSERT INTO line_items AS li (order_id, product_id, quantity) SELECT :order_id, product_id, 1 FROM products ORDER BY price LIMIT 5;
+COMMIT;
