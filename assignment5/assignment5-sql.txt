@@ -11,9 +11,28 @@ SELECT c.customer_name, AVG(t.order_total) AS average_order_price FROM customers
 JOIN (SELECT o.customer_id, SUM(p.price * li.quantity) AS order_total FROM orders AS o JOIN line_items AS li ON o.order_id = li.order_id JOIN products AS p ON li.product_id = p.product_id GROUP BY o.customer_id, o.order_id) AS t ON c.customer_id = t.customer_id GROUP BY c.customer_id, c.customer_name ORDER BY c.customer_name;
 
 ## 5a - Task 3:
-SELECT c.customer_id, c.customer_name FROM customers AS c WHERE c.customer_name = 'Perez and Sons';
+SELECT c.customer_id FROM customers AS c WHERE c.customer_name = 'Perez and Sons';
 SELECT e.employee_id FROM employees AS e WHERE e.first_name = 'Miranda' AND e.last_name = 'Harris';
 SELECT p.product_id FROM products AS p ORDER BY p.price ASC LIMIT 5;
 BEGIN;
-INSERT INTO orders AS o (customer_id, order_date, total_amount) VALUES() RETURNING o.order_id INTO :order_id; INSERT INTO line_items AS li (order_id, product_id, quantity) SELECT :order_id, product_id, 1 FROM products ORDER BY price LIMIT 5;
+WITH new_order AS (
+
+    INSERT INTO orders (customer_id, employee_id, date) 
+    VALUES (
+        (SELECT customer_id FROM customers WHERE customer_name = 'Perez and Sons'), 
+        (SELECT employee_id FROM employees WHERE first_name = 'Miranda' AND last_name = 'Harris'), 
+        '2026-05-18'
+    )
+    RETURNING order_id
+)
+    
+INSERT INTO line_items (order_id, product_id, quantity) 
+SELECT no.order_id, p.product_id, 10 
+FROM new_order AS no 
+CROSS JOIN (SELECT product_id FROM products ORDER BY price ASC LIMIT 5) AS p 
+RETURNING line_item_id;
+SELECT * FROM line_items WHERE order_id IN (SELECT * FROM new_order) 
 COMMIT;
+
+
+
