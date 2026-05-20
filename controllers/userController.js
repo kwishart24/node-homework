@@ -61,29 +61,31 @@ async function logon(req, res, body) {
   }
 
   // Find user in system by email in global.users
-  const logonRequester = global.users.find((u) => u.email === email);
+  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+    email,
+  ]);
 
   // If no email found, then return as unauthorized
-  if (logonRequester === undefined) {
+  if (result.rows.length === 0) {
     return res
       .status(StatusCodes.UNAUTHORIZED)
-      .json({ error: "Authenication Failed" });
+      .json({ error: "Authentication Failed" });
   }
 
   // If user is found, then connect credentials entered with user found in the system
-  const foundUser = logonRequester;
+  const foundUser = result.rows[0];
 
   //const passwordFromReq = password;
 
   // Compare passwords to make sure they match
-  const match = await comparePassword(password, foundUser.hashed);
+  const match = await comparePassword(password, foundUser.hashed_password);
   if (!match) {
     return res
       .status(StatusCodes.UNAUTHORIZED)
       .json({ error: "Authentication Failed" });
   } else {
     // If successful, make the user logged in and the current user
-    global.user_id = foundUser;
+    global.user_id = foundUser.id;
     return res
       .status(StatusCodes.OK)
       .json({ name: foundUser.name, email: foundUser.email });
