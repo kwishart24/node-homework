@@ -29,5 +29,5 @@ new_line_items AS (
     )
 SELECT * FROM new_order;
 
-
-
+## 5a - Task 4:
+SELECT e.employee_id, e.first_name, e.last_name, COUNT(o.order_id) AS order_count FROM employees AS e JOIN orders AS o ON e.employee_id = o.employee_id GROUP BY e.employee_id, first_name, last_name HAVING COUNT(order_id) > 5 ORDER BY e.last_name;
