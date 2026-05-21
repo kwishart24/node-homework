@@ -36,12 +36,11 @@ async function register(req, res, next) {
   const { error, value } = userSchema.validate(req.body, { abortEarly: false });
 
   if (error) {
+    console.log(error, "this is the error block");
     return res
       .status(400)
       .json({ message: "Validation failed", details: error.details });
   }
-
-  let result;
 
   try {
     // Create new user from body of request if they were submitted
@@ -52,8 +51,12 @@ async function register(req, res, next) {
     VALUES ($1, $2, $3)
     RETURNING id, email, name
   `;
-    result = await pool.query(sql, [value.email, value.name, hashed]);
-    // success → step 5
+    const result = await pool.query(sql, [value.email, value.name, hashed]);
+    const newUser = result.rows[0];
+    global.user_id = newUser.id; // After the registration step, the user is set to logged on.
+    return res
+      .status(StatusCodes.CREATED)
+      .json({ name: newUser.name, email: newUser.email });
   } catch (e) {
     if (e.code === "23505") {
       // duplicate email
@@ -64,18 +67,12 @@ async function register(req, res, next) {
     }
     return next(e); // forward other errors
   }
-
-  const newUser = result.rows[0];
-  global.user_id = newUser.id; // After the registration step, the user is set to logged on.
-
-  return res
-    .status(StatusCodes.CREATED)
-    .json({ name: newUser.name, email: newUser.email });
 }
 
 // ************USER LOGON********************
-async function logon(req, res, body) {
-  const { email, password } = body;
+async function logon(req, res, next) {
+  if (!req.body) req.body = {};
+  const { email, password } = req.body;
 
   // Check that email and password were submitted
   if (!email || !password) {
@@ -110,9 +107,7 @@ async function logon(req, res, body) {
   } else {
     // If successful, make the user logged in and the current user
     global.user_id = foundUser.id;
-    return res
-      .status(StatusCodes.OK)
-      .json({ name: foundUser.name, email: foundUser.email });
+    return res.status(StatusCodes.OK).json({ name: foundUser.name });
   }
 }
 

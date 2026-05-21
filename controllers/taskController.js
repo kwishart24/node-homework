@@ -12,16 +12,6 @@ async function create(req, res) {
     return res.status(400).json({ message: error.message });
   }
 
-  // const newTask = {
-  //   ...value,
-  //   title: value.title,
-  //   id: taskCounter(),
-  //   userId: global.user_id.email,
-  //   isCompleted: false,
-  // };
-  // global.tasks.push(newTask);
-  // const { userId, ...sanitizedTask } = newTask;
-
   const task = await pool.query(
     `INSERT INTO tasks (title, is_completed, user_id) 
   VALUES ( $1, $2, $3 ) RETURNING id, title, is_completed`,
