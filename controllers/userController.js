@@ -1,5 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { userSchema } = require("../validation/userSchema");
+const { pool } = require("../db/pg-pool");
 
 // **************HASHING PASSWORDS***********
 const crypto = require("crypto");
@@ -20,7 +21,7 @@ async function comparePassword(inputPassword, storedHash) {
 }
 
 // **************REGISTRATION*****************
-async function register(req, res, body) {
+async function register(req, res, next) {
   if (!req.body) req.body = {};
 
   const { name, email, password } = req.body;
@@ -35,16 +36,39 @@ async function register(req, res, body) {
   const { error, value } = userSchema.validate(req.body, { abortEarly: false });
 
   if (error) {
-    return res.status(400).json({ message: error.message });
+    return res
+      .status(400)
+      .json({ message: "Validation failed", details: error.details });
   }
-  // Create new user from body of request if they were submitted
-  const hashed = await hashPassword(value.password);
-  //const newUser = { ...req.body }; // this makes a copy
-  const newUser = { ...value, hashed };
-  global.users.push(newUser);
-  global.user_id = newUser; // After the registration step, the user is set to logged on.
-  //delete value.password;
-  res
+
+  let result;
+
+  try {
+    // Create new user from body of request if they were submitted
+    const hashed = await hashPassword(value.password);
+
+    const sql = `
+    INSERT INTO users (email, name, hashed_password)
+    VALUES ($1, $2, $3)
+    RETURNING id, email, name
+  `;
+    result = await pool.query(sql, [value.email, value.name, hashed]);
+    // success → step 5
+  } catch (e) {
+    if (e.code === "23505") {
+      // duplicate email
+      return res.status(400).json({
+        message: "Registration failed",
+        details: ["Email already in use"],
+      });
+    }
+    return next(e); // forward other errors
+  }
+
+  const newUser = result.rows[0];
+  global.user_id = newUser.id; // After the registration step, the user is set to logged on.
+
+  return res
     .status(StatusCodes.CREATED)
     .json({ name: newUser.name, email: newUser.email });
 }
