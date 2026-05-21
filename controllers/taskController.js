@@ -1,15 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { patchTaskSchema, taskSchema } = require("../validation/taskSchema");
-const { pool } = require("../db/pg-pool");
-
-// Task Counter
-const taskCounter = (() => {
-  let lastTaskNumber = 0;
-  return () => {
-    lastTaskNumber += 1;
-    return lastTaskNumber;
-  };
-})();
+const pool = require("../db/pg-pool");
 
 // Create function
 async function create(req, res) {
@@ -34,7 +25,7 @@ async function create(req, res) {
   const task = await pool.query(
     `INSERT INTO tasks (title, is_completed, user_id) 
   VALUES ( $1, $2, $3 ) RETURNING id, title, is_completed`,
-    [value.title, value.is_completed, global.user_id],
+    [value.title, value.isCompleted, global.user_id],
   );
 
   const newTask = task.rows[0];
@@ -67,7 +58,6 @@ async function show(req, res, next) {
       .json({ message: "The task ID passed is not valid." });
   }
 
-  const userId = req.user.id;
   let result;
 
   try {
@@ -75,7 +65,7 @@ async function show(req, res, next) {
       `SELECT id, title, is_completed 
       FROM tasks
    WHERE id = $1 AND user_id = $2`,
-      [taskToShow, userId],
+      [taskToShow, global.user_id],
     );
     if (result.rows.length === 0) {
       return res
@@ -145,7 +135,6 @@ async function deleteTask(req, res, next) {
       .json({ message: "The task ID passed is not valid." });
   }
 
-  const userId = req.user.id;
   let result;
 
   try {
@@ -153,7 +142,7 @@ async function deleteTask(req, res, next) {
       `DELETE FROM tasks
    WHERE id = $1 AND user_id = $2
    RETURNING id, title, is_completed`,
-      [taskToFind, userId],
+      [taskToFind, global.user_id],
     );
     if (result.rows.length === 0) {
       return res

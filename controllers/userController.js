@@ -1,6 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { userSchema } = require("../validation/userSchema");
-const { pool } = require("../db/pg-pool");
+const pool = require("../db/pg-pool");
 
 // **************HASHING PASSWORDS***********
 const crypto = require("crypto");
@@ -75,7 +75,7 @@ async function register(req, res, next) {
 
 // ************USER LOGON********************
 async function logon(req, res, body) {
-  const { email, password } = req.body;
+  const { email, password } = body;
 
   // Check that email and password were submitted
   if (!email || !password) {
