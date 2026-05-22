@@ -41,11 +41,12 @@ app.get("/", (req, res) => {
   res.json({ message: "everything worked!" });
 });
 
-app.use((req, res) => {
+app.use((req, res, next) => {
   console.log(`You can't do a ${req.method} for ${req.url}`);
   if (!res.headersSent) {
     res.status(404).send(`You can't do a ${req.method} for ${req.url}.`);
   }
+  next();
 });
 
 //Error Handler
