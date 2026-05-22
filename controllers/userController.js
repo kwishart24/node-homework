@@ -24,39 +24,35 @@ async function comparePassword(inputPassword, storedHash) {
 async function register(req, res, next) {
   if (!req.body) req.body = {};
 
-  const { name, email, password } = req.body;
-
-  // Check that name, email, password were submitted
-  if (!name || !email || !password) {
-    return res
-      .status(StatusCodes.BAD_REQUEST)
-      .json({ error: "Name, email, and password are all required." });
-  }
-
   const { error, value } = userSchema.validate(req.body, { abortEarly: false });
 
   if (error) {
-    console.log(error, "this is the error block");
-    return res
-      .status(400)
-      .json({ message: "Validation failed", details: error.details });
+    return res.status(400).json({
+      message: "Validation failed",
+      details: error.details,
+    });
   }
 
   try {
     // Create new user from body of request if they were submitted
-    const hashed = await hashPassword(value.password);
+    value.hashed_password = await hashPassword(value.password);
 
     const sql = `
     INSERT INTO users (email, name, hashed_password)
     VALUES ($1, $2, $3)
     RETURNING id, email, name
   `;
-    const result = await pool.query(sql, [value.email, value.name, hashed]);
+    const result = await pool.query(sql, [
+      value.email,
+      value.name,
+      value.hashed_password,
+    ]);
     const newUser = result.rows[0];
     global.user_id = newUser.id; // After the registration step, the user is set to logged on.
-    return res
-      .status(StatusCodes.CREATED)
-      .json({ name: newUser.name, email: newUser.email });
+    return res.status(StatusCodes.CREATED).json({
+      email: newUser.email,
+      name: newUser.name,
+    });
   } catch (e) {
     if (e.code === "23505") {
       // duplicate email
@@ -82,32 +78,32 @@ async function logon(req, res, next) {
   }
 
   // Find user in system by email in global.users
-  const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-    email,
-  ]);
+  try {
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
 
-  // If no email found, then return as unauthorized
-  if (result.rows.length === 0) {
-    return res
-      .status(StatusCodes.UNAUTHORIZED)
-      .json({ error: "Authentication Failed" });
-  }
+    // If no email found, then return as unauthorized
+    if (result.rows.length === 0) {
+      return res
+        .status(StatusCodes.UNAUTHORIZED)
+        .json({ error: "Authentication failed" });
+    }
 
-  // If user is found, then connect credentials entered with user found in the system
-  const foundUser = result.rows[0];
+    // If user is found, then connect credentials entered with user found in the system
+    const foundUser = result.rows[0];
+    // Compare passwords to make sure they match
+    const match = await comparePassword(password, foundUser.hashed_password);
+    if (!match) {
+      return res
+        .status(StatusCodes.UNAUTHORIZED)
+        .json({ error: "Authentication failed" });
+    }
 
-  //const passwordFromReq = password;
-
-  // Compare passwords to make sure they match
-  const match = await comparePassword(password, foundUser.hashed_password);
-  if (!match) {
-    return res
-      .status(StatusCodes.UNAUTHORIZED)
-      .json({ error: "Authentication Failed" });
-  } else {
-    // If successful, make the user logged in and the current user
     global.user_id = foundUser.id;
     return res.status(StatusCodes.OK).json({ name: foundUser.name });
+  } catch (e) {
+    return next(e);
   }
 }
 
