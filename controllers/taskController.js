@@ -53,6 +53,55 @@ async function create(req, res, next) {
   }
 }
 
+// ************BULK CREATE TASKS********************
+async function bulkCreate(req, res, next) {
+  const { tasks } = req.body;
+
+  // Validate the tasks array
+  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+    return res.status(400).json({
+      error: "Invalid request data. Expected an array of tasks.",
+    });
+  }
+
+  // Validate each task individually
+  const validTasks = [];
+
+  for (const task of tasks) {
+    const { error, value } = taskSchema.validate(task);
+
+    if (error) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: error.details,
+      });
+    }
+
+    validTasks.push({
+      title: value.title,
+      isCompleted: value.isCompleted ?? false,
+      priority: value.priority ?? "medium",
+      userId: global.user_id,
+    });
+  }
+
+  // Insert all tasks using createMany
+  try {
+    const result = await prisma.task.createMany({
+      data: validTasks,
+      skipDuplicates: false,
+    });
+
+    return res.status(201).json({
+      message: "Bulk task creation successful",
+      tasksCreated: result.count,
+      totalRequested: validTasks.length,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 // ************INDEX/READ FUNCTION********************
 async function index(req, res, next) {
   try {
@@ -60,6 +109,14 @@ async function index(req, res, next) {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+
+    if (page < 1) {
+      return res.status(400).json({ error: "Page must be >= 1" });
+    }
+
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({ error: "Limit must be between 1 and 100" });
+    }
 
     // Build where clause with optional search filter
     const whereClause = { userId: global.user_id };
@@ -133,7 +190,17 @@ async function show(req, res, next) {
           userId: global.user_id,
         },
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+        User: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!task) {
@@ -172,7 +239,16 @@ async function update(req, res, next) {
         id: id,
         userId: global.user_id, // ensures user isolation
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+        priority: true,
+        createdAt: true,
+        User: {
+          select: { name: true, email: true },
+        },
+      },
     });
 
     return res.status(StatusCodes.OK).json(task);
@@ -216,4 +292,5 @@ module.exports = {
   update,
   deleteTask,
   create,
+  bulkCreate,
 };
