@@ -3,7 +3,25 @@ const { patchTaskSchema, taskSchema } = require("../validation/taskSchema");
 //const pool = require("../db/pg-pool");
 const prisma = require("../db/prisma");
 
-// Create function
+// Sorting Helper function
+const getOrderBy = (query) => {
+  const validSortFields = [
+    "title",
+    "priority",
+    "createdAt",
+    "id",
+    "isCompleted",
+  ];
+  const sortBy = query.sortBy || "createdAt";
+  const sortDirection = query.sortDirection === "asc" ? "asc" : "desc";
+
+  if (validSortFields.includes(sortBy)) {
+    return { [sortBy]: sortDirection };
+  }
+  return { createdAt: "desc" }; // default fallback
+};
+
+// ************CREATE TASK FUNCTION********************
 async function create(req, res, next) {
   if (!req.body) req.body = {};
 
@@ -35,13 +53,27 @@ async function create(req, res, next) {
   }
 }
 
-// Read/Index Function
+// ************INDEX/READ FUNCTION********************
 async function index(req, res, next) {
   try {
+    //Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Build where clause with optional search filter
+    const whereClause = { userId: global.user_id };
+
+    if (req.query.find) {
+      whereClause.title = {
+        contains: req.query.find,
+        mode: "insensitive",
+      };
+    }
+
+    //Fetch tasks
     const tasks = await prisma.task.findMany({
-      where: {
-        userId: global.user_id,
-      },
+      where: whereClause,
       select: {
         id: true,
         title: true,
@@ -55,7 +87,27 @@ async function index(req, res, next) {
           },
         },
       },
+      skip: skip,
+      take: limit,
+      orderBy: getOrderBy(req.query),
     });
+
+    // Get total count for pagination metadata
+    const totalTasks = await prisma.task.count({
+      where: whereClause,
+    });
+
+    // Build pagination object with complete metadata
+    const pages = Math.ceil(totalTasks / limit);
+
+    const pagination = {
+      page,
+      limit,
+      total: totalTasks,
+      pages,
+      hasNext: page < pages,
+      hasPrev: page > 1,
+    };
 
     if (tasks.length === 0) {
       return res
@@ -63,13 +115,13 @@ async function index(req, res, next) {
         .json({ message: "User has no tasks." });
     }
 
-    return res.status(StatusCodes.OK).json(tasks);
+    return res.status(StatusCodes.OK).json({ tasks, pagination });
   } catch (err) {
     return next(err);
   }
 }
 
-// Show Function
+// ************SHOW FUNCTION********************
 async function show(req, res, next) {
   const id = parseInt(req.params.id, 10);
 
@@ -98,7 +150,7 @@ async function show(req, res, next) {
   }
 }
 
-// Update Function
+// ************UPDATE FUNCTION********************
 async function update(req, res, next) {
   if (!req.body) req.body = {};
 
@@ -134,7 +186,7 @@ async function update(req, res, next) {
   }
 }
 
-// Delete Function
+// ************DELETE FUNCTION********************
 async function deleteTask(req, res, next) {
   const id = parseInt(req.params.id, 10);
 
@@ -157,32 +209,6 @@ async function deleteTask(req, res, next) {
     return next(err);
   }
 }
-//   const taskToFind = parseInt(req.params?.id); // if there are no params, the ? makes sure that you get a null
-//   if (Number.isNaN(taskToFind)) {
-//     return res
-//       .status(400)
-//       .json({ message: "The task ID passed is not valid." });
-//   }
-
-//   let result;
-
-//   try {
-//     result = await pool.query(
-//       `DELETE FROM tasks
-//    WHERE id = $1 AND user_id = $2
-//    RETURNING id, title, is_completed`,
-//       [taskToFind, global.user_id],
-//     );
-//     if (result.rows.length === 0) {
-//       return res
-//         .status(StatusCodes.NOT_FOUND)
-//         .json({ message: "Task not found." });
-//     }
-//   } catch (e) {
-//     return next(e); // forward other errors
-//   }
-//   return res.status(StatusCodes.OK).json(taskToFind); // return the deleted entry without its userId. The default status code, OK, is returned
-// }
 
 module.exports = {
   index,
