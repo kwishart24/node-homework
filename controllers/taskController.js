@@ -7,6 +7,7 @@ const prisma = require("../db/prisma");
 async function create(req, res, next) {
   if (!req.body) req.body = {};
 
+  //Joi validation
   const { error, value } = taskSchema.validate(req.body, { abortEarly: false });
 
   if (error) {
@@ -22,9 +23,10 @@ async function create(req, res, next) {
       data: {
         title: value.title,
         isCompleted: value.isCompleted,
+        priority: value.priority,
         userId: global.user_id, // required
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: { id: true, title: true, isCompleted: true, priority: true },
     });
 
     return res.status(StatusCodes.CREATED).json(task);
@@ -33,35 +35,38 @@ async function create(req, res, next) {
   }
 }
 
-//   const task = await pool.query(
-//     `INSERT INTO tasks (title, is_completed, user_id)
-//   VALUES ( $1, $2, $3 ) RETURNING id, title, is_completed`,
-//     [value.title, value.isCompleted, global.user_id],
-//   );
-
-//   const newTask = task.rows[0];
-//   return res.status(StatusCodes.CREATED).json({
-//     id: newTask.id,
-//     title: newTask.title,
-//     isCompleted: newTask.is_completed,
-//   });
-// }
-
 // Read/Index Function
-async function index(req, res) {
-  const tasks = await prisma.task.findMany({
-    where: {
-      userId: global.user_id, // only tasks for this user
-    },
-    select: { id: true, title: true, isCompleted: true },
-  });
+async function index(req, res, next) {
+  try {
+    const tasks = await prisma.task.findMany({
+      where: {
+        userId: global.user_id,
+      },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+        priority: true,
+        createdAt: true,
+        User: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
-  if (tasks.length === 0) {
-    return res
-      .status(StatusCodes.NOT_FOUND)
-      .json({ message: "User has no tasks." });
+    if (tasks.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json({ message: "User has no tasks." });
+    }
+
+    return res.status(StatusCodes.OK).json(tasks);
+  } catch (err) {
+    return next(err);
   }
-  return res.status(StatusCodes.OK).json(tasks);
 }
 
 // Show Function
@@ -92,35 +97,6 @@ async function show(req, res, next) {
     return next(err);
   }
 }
-//   const taskToShow = parseInt(req.params?.id); // if there are no params, the ? makes sure that you get a null
-//   if (Number.isNaN(taskToShow)) {
-//     return res
-//       .status(400)
-//       .json({ message: "The task ID passed is not valid." });
-//   }
-
-//   let result;
-
-//   try {
-//     result = await pool.query(
-//       `SELECT id, title, is_completed
-//       FROM tasks
-//    WHERE id = $1 AND user_id = $2`,
-//       [taskToShow, global.user_id],
-//     );
-//     if (result.rows.length === 0) {
-//       return res
-//         .status(StatusCodes.NOT_FOUND)
-//         .json({ message: "Task not found." });
-//     }
-//   } catch (e) {
-//     return next(e); // forward other errors
-//   }
-
-//   const task = result.rows[0];
-
-//   return res.status(StatusCodes.OK).json(task);
-// }
 
 // Update Function
 async function update(req, res, next) {
@@ -157,39 +133,6 @@ async function update(req, res, next) {
     return next(err);
   }
 }
-
-//   const taskChange = {};
-//   if (value.title !== undefined) taskChange.title = value.title;
-//   if (value.isCompleted !== undefined)
-//     taskChange.isCompleted = value.isCompleted;
-
-//   let keys = Object.keys(taskChange);
-
-//   if (Object.keys(taskChange).length === 0) {
-//     return res
-//       .status(StatusCodes.BAD_REQUEST)
-//       .json({ message: "No valid fields to update." });
-//   }
-
-//   keys = keys.map((key) => (key === "isCompleted" ? "is_completed" : key));
-//   const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
-//   const idParm = `$${keys.length + 1}`;
-//   const userParm = `$${keys.length + 2}`;
-//   const result = await pool.query(
-//     `UPDATE tasks SET ${setClauses}
-//   WHERE id = ${idParm} AND user_id = ${userParm} RETURNING id, title, is_completed`,
-//     [...Object.values(taskChange), req.params.id, global.user_id],
-//   );
-
-//   if (result.rows.length === 0) {
-//     return res
-//       .status(StatusCodes.NOT_FOUND)
-//       .json({ message: "Task not found." });
-//   }
-
-//   const updatedTask = result.rows[0];
-//   return res.status(StatusCodes.OK).json(updatedTask);
-// }
 
 // Delete Function
 async function deleteTask(req, res, next) {
