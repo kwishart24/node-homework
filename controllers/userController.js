@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const { userSchema } = require("../validation/userSchema");
-const pool = require("../db/pg-pool");
+//const pool = require("../db/pg-pool");
+const prisma = require("../db/prisma");
 
 // **************HASHING PASSWORDS***********
 const crypto = require("crypto");
@@ -24,6 +25,7 @@ async function comparePassword(inputPassword, storedHash) {
 async function register(req, res, next) {
   if (!req.body) req.body = {};
 
+  //Validate with Joi
   const { error, value } = userSchema.validate(req.body, { abortEarly: false });
 
   if (error) {
@@ -34,34 +36,38 @@ async function register(req, res, next) {
   }
 
   try {
+    //Hash password
+    const hashedPassword = await hashPassword(value.password);
     // Create new user from body of request if they were submitted
-    value.hashed_password = await hashPassword(value.password);
+    // value.hashed_password = await hashPassword(value.password);
 
-    const sql = `
-    INSERT INTO users (email, name, hashed_password)
-    VALUES ($1, $2, $3)
-    RETURNING id, email, name
-  `;
-    const result = await pool.query(sql, [
-      value.email,
-      value.name,
-      value.hashed_password,
-    ]);
-    const newUser = result.rows[0];
-    global.user_id = newUser.id; // After the registration step, the user is set to logged on.
-    return res.status(StatusCodes.CREATED).json({
-      email: newUser.email,
-      name: newUser.name,
+    //Remove plain password
+    delete value.password;
+
+    // Create user with Prisma
+    const user = await prisma.user.create({
+      data: {
+        name: value.name,
+        email: value.email.toLowerCase(),
+        hashedPassword: hashedPassword,
+      },
+      select: { id: true, name: true, email: true },
     });
-  } catch (e) {
-    if (e.code === "23505") {
-      // duplicate email
+
+    // Set global user id
+    global.user_id = user.id;
+
+    return res.status(StatusCodes.CREATED).json(user);
+  } catch (err) {
+    // Prisma duplicate email error
+    if (err.name === "PrismaClientKnownRequestError" && err.code === "P2002") {
       return res.status(400).json({
         message: "Registration failed",
         details: ["Email already in use"],
       });
     }
-    return next(e); // forward other errors
+
+    return next(err);
   }
 }
 
@@ -79,21 +85,19 @@ async function logon(req, res, next) {
 
   // Find user in system by email in global.users
   try {
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    const normalizedEmail = email.toLowerCase();
 
-    // If no email found, then return as unauthorized
-    if (result.rows.length === 0) {
+    const foundUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!foundUser) {
       return res
         .status(StatusCodes.UNAUTHORIZED)
         .json({ error: "Authentication failed" });
     }
-
-    // If user is found, then connect credentials entered with user found in the system
-    const foundUser = result.rows[0];
     // Compare passwords to make sure they match
-    const match = await comparePassword(password, foundUser.hashed_password);
+    const match = await comparePassword(password, foundUser.hashedPassword);
     if (!match) {
       return res
         .status(StatusCodes.UNAUTHORIZED)
