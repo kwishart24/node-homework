@@ -158,7 +158,7 @@ async function logon(req, res, next) {
 }
 
 // ************USER SHOW METHOD********************
-exports.show = async (req, res) => {
+async function userShow(req, res) {
   const userId = parseInt(req.params.id);
 
   if (isNaN(userId)) {
@@ -191,7 +191,7 @@ exports.show = async (req, res) => {
   }
 
   res.status(200).json(user);
-};
+}
 
 // ************USER LOGOFF********************
 function logoff(req, res) {
@@ -201,4 +201,4 @@ function logoff(req, res) {
     .json({ message: "Logged off successfully." });
 }
 
-module.exports = { register, logon, logoff };
+module.exports = { register, logon, logoff, userShow };

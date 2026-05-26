@@ -75,6 +75,7 @@ async function getUserAnalytics(req, res, next) {
 }
 
 // ************USER LIST WITH TASK COUNT********************
+//GET /api/analytics/users
 async function getUsersWithStats(req, res, next) {
   try {
     // Pagination
@@ -144,7 +145,11 @@ async function getUsersWithStats(req, res, next) {
 }
 
 // ************RAW SQL SEARCH********************
-//GET /api/analytics/tasks/search
+//GET /api/tasks?find=meeting&page=1&limit=10
+
+//Sorting
+//GET /api/tasks?sortBy=title&sortDirection=asc
+
 async function searchTasks(req, res, next) {
   try {
     // Validate search query
@@ -189,6 +194,8 @@ async function searchTasks(req, res, next) {
       LIMIT ${limit};
     `;
 
+    console.log(searchResults);
+
     // Return results
     return res.status(200).json({
       results: searchResults,
@@ -196,6 +203,7 @@ async function searchTasks(req, res, next) {
       count: searchResults.length,
     });
   } catch (err) {
+    console.log(err);
     return next(err);
   }
 }

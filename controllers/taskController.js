@@ -56,6 +56,7 @@ async function create(req, res, next) {
 // ************BULK CREATE TASKS********************
 async function bulkCreate(req, res, next) {
   const { tasks } = req.body;
+  console.log(tasks);
 
   // Validate the tasks array
   if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
