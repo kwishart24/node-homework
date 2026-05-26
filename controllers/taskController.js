@@ -1,6 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { patchTaskSchema, taskSchema } = require("../validation/taskSchema");
-const pool = require("../db/pg-pool");
+//const pool = require("../db/pg-pool");
 const prisma = require("../db/prisma");
 
 // Create function
@@ -49,21 +49,19 @@ async function create(req, res, next) {
 
 // Read/Index Function
 async function index(req, res) {
-  const result = await prisma.task.findMany({
+  const tasks = await prisma.task.findMany({
     where: {
       userId: global.user_id, // only tasks for this user
     },
     select: { id: true, title: true, isCompleted: true },
   });
 
-  const userTasks = result.rows;
-
-  if (userTasks.length === 0) {
+  if (tasks.length === 0) {
     return res
       .status(StatusCodes.NOT_FOUND)
       .json({ message: "User has no tasks." });
   }
-  return res.status(StatusCodes.OK).json(userTasks);
+  return res.status(StatusCodes.OK).json(tasks);
 }
 
 // Show Function
@@ -207,7 +205,7 @@ async function deleteTask(req, res, next) {
       },
     });
 
-    return res.status(StatusCodes.NO_CONTENT).send();
+    return res.status(StatusCodes.OK).json("deleted");
   } catch (err) {
     if (err.code === "P2025") {
       return res.status(404).json({ message: "The task was not found." });

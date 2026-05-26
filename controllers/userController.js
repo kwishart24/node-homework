@@ -1,6 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const { userSchema } = require("../validation/userSchema");
-const pool = require("../db/pg-pool");
+//const pool = require("../db/pg-pool");
 const prisma = require("../db/prisma");
 
 // **************HASHING PASSWORDS***********
