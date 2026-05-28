@@ -3,10 +3,29 @@ const { patchTaskSchema, taskSchema } = require("../validation/taskSchema");
 //const pool = require("../db/pg-pool");
 const prisma = require("../db/prisma");
 
-// Create function
+// Sorting Helper function
+const getOrderBy = (query) => {
+  const validSortFields = [
+    "title",
+    "priority",
+    "createdAt",
+    "id",
+    "isCompleted",
+  ];
+  const sortBy = query.sortBy || "createdAt";
+  const sortDirection = query.sortDirection === "asc" ? "asc" : "desc";
+
+  if (validSortFields.includes(sortBy)) {
+    return { [sortBy]: sortDirection };
+  }
+  return { createdAt: "desc" }; // default fallback
+};
+
+// ************CREATE TASK FUNCTION********************
 async function create(req, res, next) {
   if (!req.body) req.body = {};
 
+  //Joi validation
   const { error, value } = taskSchema.validate(req.body, { abortEarly: false });
 
   if (error) {
@@ -22,9 +41,10 @@ async function create(req, res, next) {
       data: {
         title: value.title,
         isCompleted: value.isCompleted,
+        priority: value.priority,
         userId: global.user_id, // required
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: { id: true, title: true, isCompleted: true, priority: true },
     });
 
     return res.status(StatusCodes.CREATED).json(task);
@@ -33,38 +53,133 @@ async function create(req, res, next) {
   }
 }
 
-//   const task = await pool.query(
-//     `INSERT INTO tasks (title, is_completed, user_id)
-//   VALUES ( $1, $2, $3 ) RETURNING id, title, is_completed`,
-//     [value.title, value.isCompleted, global.user_id],
-//   );
+// ************BULK CREATE TASKS********************
+async function bulkCreate(req, res, next) {
+  const { tasks } = req.body;
+  console.log(tasks);
 
-//   const newTask = task.rows[0];
-//   return res.status(StatusCodes.CREATED).json({
-//     id: newTask.id,
-//     title: newTask.title,
-//     isCompleted: newTask.is_completed,
-//   });
-// }
-
-// Read/Index Function
-async function index(req, res) {
-  const tasks = await prisma.task.findMany({
-    where: {
-      userId: global.user_id, // only tasks for this user
-    },
-    select: { id: true, title: true, isCompleted: true },
-  });
-
-  if (tasks.length === 0) {
-    return res
-      .status(StatusCodes.NOT_FOUND)
-      .json({ message: "User has no tasks." });
+  // Validate the tasks array
+  if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+    return res.status(400).json({
+      error: "Invalid request data. Expected an array of tasks.",
+    });
   }
-  return res.status(StatusCodes.OK).json(tasks);
+
+  // Validate each task individually
+  const validTasks = [];
+
+  for (const task of tasks) {
+    const { error, value } = taskSchema.validate(task);
+
+    if (error) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: error.details,
+      });
+    }
+
+    validTasks.push({
+      title: value.title,
+      isCompleted: value.isCompleted ?? false,
+      priority: value.priority ?? "medium",
+      userId: global.user_id,
+    });
+  }
+
+  // Insert all tasks using createMany
+  try {
+    const result = await prisma.task.createMany({
+      data: validTasks,
+      skipDuplicates: false,
+    });
+
+    return res.status(201).json({
+      message: "Bulk task creation successful",
+      tasksCreated: result.count,
+      totalRequested: validTasks.length,
+    });
+  } catch (err) {
+    return next(err);
+  }
 }
 
-// Show Function
+// ************INDEX/READ FUNCTION********************
+async function index(req, res, next) {
+  try {
+    //Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    if (page < 1) {
+      return res.status(400).json({ error: "Page must be >= 1" });
+    }
+
+    if (limit < 1 || limit > 100) {
+      return res.status(400).json({ error: "Limit must be between 1 and 100" });
+    }
+
+    // Build where clause with optional search filter
+    const whereClause = { userId: global.user_id };
+
+    if (req.query.find) {
+      whereClause.title = {
+        contains: req.query.find,
+        mode: "insensitive",
+      };
+    }
+
+    //Fetch tasks
+    const tasks = await prisma.task.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+        priority: true,
+        createdAt: true,
+        User: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      skip: skip,
+      take: limit,
+      orderBy: getOrderBy(req.query),
+    });
+
+    // Get total count for pagination metadata
+    const totalTasks = await prisma.task.count({
+      where: whereClause,
+    });
+
+    // Build pagination object with complete metadata
+    const pages = Math.ceil(totalTasks / limit);
+
+    const pagination = {
+      page,
+      limit,
+      total: totalTasks,
+      pages,
+      hasNext: page < pages,
+      hasPrev: page > 1,
+    };
+
+    if (tasks.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json({ message: "User has no tasks." });
+    }
+
+    return res.status(StatusCodes.OK).json({ tasks, pagination });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+// ************SHOW FUNCTION********************
 async function show(req, res, next) {
   const id = parseInt(req.params.id, 10);
 
@@ -76,7 +191,17 @@ async function show(req, res, next) {
           userId: global.user_id,
         },
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+        User: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!task) {
@@ -92,37 +217,8 @@ async function show(req, res, next) {
     return next(err);
   }
 }
-//   const taskToShow = parseInt(req.params?.id); // if there are no params, the ? makes sure that you get a null
-//   if (Number.isNaN(taskToShow)) {
-//     return res
-//       .status(400)
-//       .json({ message: "The task ID passed is not valid." });
-//   }
 
-//   let result;
-
-//   try {
-//     result = await pool.query(
-//       `SELECT id, title, is_completed
-//       FROM tasks
-//    WHERE id = $1 AND user_id = $2`,
-//       [taskToShow, global.user_id],
-//     );
-//     if (result.rows.length === 0) {
-//       return res
-//         .status(StatusCodes.NOT_FOUND)
-//         .json({ message: "Task not found." });
-//     }
-//   } catch (e) {
-//     return next(e); // forward other errors
-//   }
-
-//   const task = result.rows[0];
-
-//   return res.status(StatusCodes.OK).json(task);
-// }
-
-// Update Function
+// ************UPDATE FUNCTION********************
 async function update(req, res, next) {
   if (!req.body) req.body = {};
 
@@ -144,7 +240,16 @@ async function update(req, res, next) {
         id: id,
         userId: global.user_id, // ensures user isolation
       },
-      select: { id: true, title: true, isCompleted: true },
+      select: {
+        id: true,
+        title: true,
+        isCompleted: true,
+        priority: true,
+        createdAt: true,
+        User: {
+          select: { name: true, email: true },
+        },
+      },
     });
 
     return res.status(StatusCodes.OK).json(task);
@@ -158,40 +263,7 @@ async function update(req, res, next) {
   }
 }
 
-//   const taskChange = {};
-//   if (value.title !== undefined) taskChange.title = value.title;
-//   if (value.isCompleted !== undefined)
-//     taskChange.isCompleted = value.isCompleted;
-
-//   let keys = Object.keys(taskChange);
-
-//   if (Object.keys(taskChange).length === 0) {
-//     return res
-//       .status(StatusCodes.BAD_REQUEST)
-//       .json({ message: "No valid fields to update." });
-//   }
-
-//   keys = keys.map((key) => (key === "isCompleted" ? "is_completed" : key));
-//   const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
-//   const idParm = `$${keys.length + 1}`;
-//   const userParm = `$${keys.length + 2}`;
-//   const result = await pool.query(
-//     `UPDATE tasks SET ${setClauses}
-//   WHERE id = ${idParm} AND user_id = ${userParm} RETURNING id, title, is_completed`,
-//     [...Object.values(taskChange), req.params.id, global.user_id],
-//   );
-
-//   if (result.rows.length === 0) {
-//     return res
-//       .status(StatusCodes.NOT_FOUND)
-//       .json({ message: "Task not found." });
-//   }
-
-//   const updatedTask = result.rows[0];
-//   return res.status(StatusCodes.OK).json(updatedTask);
-// }
-
-// Delete Function
+// ************DELETE FUNCTION********************
 async function deleteTask(req, res, next) {
   const id = parseInt(req.params.id, 10);
 
@@ -214,32 +286,6 @@ async function deleteTask(req, res, next) {
     return next(err);
   }
 }
-//   const taskToFind = parseInt(req.params?.id); // if there are no params, the ? makes sure that you get a null
-//   if (Number.isNaN(taskToFind)) {
-//     return res
-//       .status(400)
-//       .json({ message: "The task ID passed is not valid." });
-//   }
-
-//   let result;
-
-//   try {
-//     result = await pool.query(
-//       `DELETE FROM tasks
-//    WHERE id = $1 AND user_id = $2
-//    RETURNING id, title, is_completed`,
-//       [taskToFind, global.user_id],
-//     );
-//     if (result.rows.length === 0) {
-//       return res
-//         .status(StatusCodes.NOT_FOUND)
-//         .json({ message: "Task not found." });
-//     }
-//   } catch (e) {
-//     return next(e); // forward other errors
-//   }
-//   return res.status(StatusCodes.OK).json(taskToFind); // return the deleted entry without its userId. The default status code, OK, is returned
-// }
 
 module.exports = {
   index,
@@ -247,4 +293,5 @@ module.exports = {
   update,
   deleteTask,
   create,
+  bulkCreate,
 };

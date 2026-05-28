@@ -3,9 +3,11 @@ const app = express();
 const authMiddleware = require("./middleware/auth");
 const pool = require("./db/pg-pool");
 const prisma = require("./db/prisma");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
-// Wiring for Router to controller for POST
+// Wiring for userRouter to controller for POST
 const userRouter = require("./routes/userRoutes");
+
 // Express provided middleware which provides parsing
 app.use(express.json({ limit: "1kb" }));
 
@@ -24,6 +26,9 @@ app.use((req, res, next) => {
 //TaskRouter with authMiddleware
 const taskRouter = require("./routes/taskRoutes");
 app.use("/api/tasks", authMiddleware, taskRouter);
+
+//AnalyticsRouter with authMiddleware
+app.use("/api/analytics", authMiddleware, analyticsRoutes);
 
 // Health Check
 app.get("/health", async (req, res) => {
