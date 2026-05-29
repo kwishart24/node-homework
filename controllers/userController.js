@@ -2,6 +2,26 @@ const { StatusCodes } = require("http-status-codes");
 const { userSchema } = require("../validation/userSchema");
 //const pool = require("../db/pg-pool");
 const prisma = require("../db/prisma");
+const { randomUUID } = require("crypto");
+const jwt = require("jsonwebtoken");
+
+// **************SETTING THE COOKIE***********
+const cookieFlags = (req) => {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // only when HTTPS is available
+    sameSite: "Strict",
+  };
+};
+
+const setJwtCookie = (req, res, user) => {
+  // Sign JWT
+  const payload = { id: user.id, csrfToken: randomUUID() };
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" }); // 1 hour expiration
+  // Set cookie.  Note that the cookie flags have to be different in production and in test.
+  res.cookie("jwt", token, { ...cookieFlags(req), maxAge: 3600000 }); // 1 hour expiration
+  return payload.csrfToken; // this is needed in the body returned by logon() or register()
+};
 
 // **************HASHING PASSWORDS***********
 const crypto = require("crypto");
@@ -97,13 +117,16 @@ async function register(req, res, next) {
     });
 
     // Set global user id
-    global.user_id = result.user.id;
+    //global.user_id = result.user.id;
+
+    const csrfToken = setJwtCookie(req, res, result.user);
 
     // Return response
     return res.status(201).json({
-      user: result.user,
+      user: result.user.name,
       welcomeTasks: result.welcomeTasks,
       transactionStatus: "success",
+      csrfToken,
     });
   } catch (err) {
     if (err.name === "PrismaClientKnownRequestError" && err.code === "P2002") {
@@ -150,8 +173,11 @@ async function logon(req, res, next) {
         .json({ error: "Authentication failed" });
     }
 
-    global.user_id = foundUser.id;
-    return res.status(StatusCodes.OK).json({ name: foundUser.name });
+    //global.user_id = foundUser.id;
+
+    const csrfToken = setJwtCookie(req, res, foundUser);
+
+    return res.status(StatusCodes.OK).json({ name: foundUser.name }, csrfToken);
   } catch (e) {
     return next(e);
   }
@@ -195,7 +221,8 @@ async function userShow(req, res) {
 
 // ************USER LOGOFF********************
 function logoff(req, res) {
-  global.user_id = null;
+  //global.user_id = null;
+  res.clearCookie("jwt", cookieFlags(req));
   return res
     .status(StatusCodes.OK)
     .json({ message: "Logged off successfully." });

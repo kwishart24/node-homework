@@ -1,12 +1,28 @@
 const express = require("express");
 const app = express();
-const authMiddleware = require("./middleware/auth");
+//const authMiddleware = require("./middleware/auth");
+const jwtMiddleware = require("./middleware/jwtMiddleware");
 const pool = require("./db/pg-pool");
 const prisma = require("./db/prisma");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const { xss } = require("express-xss-sanitizer");
+const rateLimiter = require("express-rate-limit");
 
 // Wiring for userRouter to controller for POST
 const userRouter = require("./routes/userRoutes");
+
+//Rate Limiting
+app.use(
+  rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+  }),
+);
+
+//Helmet
+app.use(helmet());
 
 // Express provided middleware which provides parsing
 app.use(express.json({ limit: "1kb" }));
@@ -23,12 +39,21 @@ app.use((req, res, next) => {
   next();
 });
 
-//TaskRouter with authMiddleware
-const taskRouter = require("./routes/taskRoutes");
-app.use("/api/tasks", authMiddleware, taskRouter);
+//Cookie Parser
+app.use(cookieParser());
 
-//AnalyticsRouter with authMiddleware
-app.use("/api/analytics", authMiddleware, analyticsRoutes);
+//XSS Protection
+app.use(xss());
+
+//TaskRouter with jwtMiddleware
+const taskRouter = require("./routes/taskRoutes");
+app.use("/api/tasks", jwtMiddleware, taskRouter);
+
+//AnalyticsRouter with jwtMiddleware
+app.use("/api/analytics", jwtMiddleware, analyticsRoutes);
+
+//Other Security Middleware
+app.set("trust proxy", 1);
 
 // Health Check
 app.get("/health", async (req, res) => {

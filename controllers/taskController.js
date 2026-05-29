@@ -42,7 +42,7 @@ async function create(req, res, next) {
         title: value.title,
         isCompleted: value.isCompleted,
         priority: value.priority,
-        userId: global.user_id, // required
+        userId: req.user.id, // required
       },
       select: { id: true, title: true, isCompleted: true, priority: true },
     });
@@ -82,7 +82,7 @@ async function bulkCreate(req, res, next) {
       title: value.title,
       isCompleted: value.isCompleted ?? false,
       priority: value.priority ?? "medium",
-      userId: global.user_id,
+      userId: req.user.id,
     });
   }
 
@@ -120,7 +120,7 @@ async function index(req, res, next) {
     }
 
     // Build where clause with optional search filter
-    const whereClause = { userId: global.user_id };
+    const whereClause = { userId: req.user.id };
 
     if (req.query.find) {
       whereClause.title = {
@@ -188,7 +188,7 @@ async function show(req, res, next) {
       where: {
         id_userId: {
           id: id,
-          userId: global.user_id,
+          userId: req.user.id,
         },
       },
       select: {
@@ -238,7 +238,7 @@ async function update(req, res, next) {
       data: value, // Joi‑validated changes
       where: {
         id: id,
-        userId: global.user_id, // ensures user isolation
+        userId: req.user.id, // ensures user isolation
       },
       select: {
         id: true,
@@ -272,7 +272,7 @@ async function deleteTask(req, res, next) {
       where: {
         id_userId: {
           id: id,
-          userId: global.user_id,
+          userId: req.user.id,
         },
       },
     });
