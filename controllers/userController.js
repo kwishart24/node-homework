@@ -123,9 +123,12 @@ async function register(req, res, next) {
 
     // Return response
     return res.status(201).json({
-      user: result.user.name,
-      welcomeTasks: result.welcomeTasks,
-      transactionStatus: "success",
+      user: {
+        name: result.user.name,
+        email: result.user.email,
+        welcomeTasks: result.welcomeTasks,
+        transactionStatus: "success",
+      },
       csrfToken,
     });
   } catch (err) {
@@ -177,7 +180,7 @@ async function logon(req, res, next) {
 
     const csrfToken = setJwtCookie(req, res, foundUser);
 
-    return res.status(StatusCodes.OK).json({ name: foundUser.name }, csrfToken);
+    return res.status(StatusCodes.OK).json({ name: foundUser.name, csrfToken });
   } catch (e) {
     return next(e);
   }
