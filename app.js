@@ -13,6 +13,9 @@ const rateLimiter = require("express-rate-limit");
 // Wiring for userRouter to controller for POST
 const userRouter = require("./routes/userRoutes");
 
+//Other Security Middleware
+app.set("trust proxy", 1);
+
 //Rate Limiting
 app.use(
   rateLimiter({
@@ -27,6 +30,12 @@ app.use(helmet());
 // Express provided middleware which provides parsing
 app.use(express.json({ limit: "1kb" }));
 
+//Cookie Parser
+app.use(cookieParser());
+
+//XSS Protection
+app.use(xss());
+
 app.use("/api/users", userRouter);
 
 // Globals for user storage in Memory Store
@@ -39,21 +48,12 @@ app.use((req, res, next) => {
   next();
 });
 
-//Cookie Parser
-app.use(cookieParser());
-
-//XSS Protection
-app.use(xss());
-
 //TaskRouter with jwtMiddleware
 const taskRouter = require("./routes/taskRoutes");
 app.use("/api/tasks", jwtMiddleware, taskRouter);
 
 //AnalyticsRouter with jwtMiddleware
 app.use("/api/analytics", jwtMiddleware, analyticsRoutes);
-
-//Other Security Middleware
-app.set("trust proxy", 1);
 
 // Health Check
 app.get("/health", async (req, res) => {
