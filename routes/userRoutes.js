@@ -7,10 +7,11 @@ const {
   logoff,
   userShow,
 } = require("../controllers/userController");
+const jwtMiddleware = require("../middleware/jwtMiddleware");
 
 router.route("/register").post(register);
 router.route("/logon").post(logon);
-router.route("/logoff").post(logoff);
+router.route("/logoff").post(jwtMiddleware, logoff);
 router.route("/:id").get(userShow);
 
 module.exports = router;
