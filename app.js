@@ -28,7 +28,7 @@ app.use(
 app.use(helmet());
 
 // Express provided middleware which provides parsing
-app.use(express.json({ limit: "1kb" }));
+app.use(express.json({ limit: "1mb" }));
 
 //Cookie Parser
 app.use(cookieParser());
