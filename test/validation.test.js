@@ -109,24 +109,20 @@ describe("task object validation tests", () => {
 
   // 10. If an isCompleted value is not specified but the rest of the object is valid, a default of false is provided by validation.
   it("10. If an isCompleted value is not specified but the rest of the object is valid, a default of false is provided by validation.", () => {
-    const { error } = taskSchema.validate(
+    const { value } = taskSchema.validate(
       { title: "chores" },
       { abortEarly: false },
     );
-    expect(
-      error.details.find((detail) => detail.context.key === "isCompleted"),
-    ).toBe(false);
+    expect(value.isCompleted).toBe(false);
   });
 
   // 11. If isCompleted in the provided object has the value true, it remains true after validation.
   it("11. If isCompleted in the provided object has the value true, it remains true after validation.", () => {
-    const { error } = taskSchema.validate(
+    const { value } = taskSchema.validate(
       { title: "chores", isCompleted: true },
       { abortEarly: false },
     );
-    expect(
-      error.details.find((detail) => detail.context.key === "isCompleted"),
-    ).toBe(true);
+    expect(value.isCompleted).toBe(true);
   });
 });
 
@@ -144,7 +140,7 @@ describe("patch object validation tests", () => {
 
   // 13. If no value is provided for isCompleted this remains undefined in the returned value.
   it("13. If no value is provided for isCompleted this remains undefined in the returned value.", () => {
-    const { error } = patchTaskSchema.validate(
+    const { value } = patchTaskSchema.validate(
       { title: "Updated Title" },
       { abortEarly: false },
     );
