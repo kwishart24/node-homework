@@ -39,7 +39,6 @@ const jwtMiddleware = require("../middleware/jwtMiddleware");
  *       400:
  *         description: Validation or reCAPTCHA failure
  */
-router.post("/register", register);
 
 router.route("/register").post(register);
 router.route("/logon").post(logon);
