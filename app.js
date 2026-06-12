@@ -10,6 +10,10 @@ const helmet = require("helmet");
 const { xss } = require("express-xss-sanitizer");
 const rateLimiter = require("express-rate-limit");
 
+//Swagger
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
+
 // Wiring for userRouter to controller for POST
 const userRouter = require("./routes/userRoutes");
 
@@ -67,10 +71,15 @@ app.get("/health", async (req, res) => {
   }
 });
 
+// Root Route
 app.get("/", (req, res) => {
   res.json({ message: "everything worked!" });
 });
 
+//Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+//404 Handler
 app.use((req, res, next) => {
   console.log(`You can't do a ${req.method} for ${req.url}`);
   if (!res.headersSent) {

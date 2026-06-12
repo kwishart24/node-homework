@@ -1,6 +1,6 @@
-# Getting Started with Node Development
+# Getting Started
 
-Welcome to Code the Dream’s Node/Express class! You will be learning Node.js, an implementation of the JavaScript engine that runs standalone or as a web server. This page describes how to begin. You can develop Node applications on MacOS, Linux, or Windows. If you are developing on Windows, there is no need to do development in a virtual machine, as Node development works fine in Windows native environments, but you can use the Windows Subsystem for Linux if you prefer. You will need to install:
+A secure, fully‑featured Node.js + Express backend for user authentication, task management, and analytics. Built with PostgreSQL (Neon.tech), Prisma, and deployed on Render. This page describes how to begin. You can develop Node applications on MacOS, Linux, or Windows. If you are developing on Windows, there is no need to do development in a virtual machine, as Node development works fine in Windows native environments, but you can use the Windows Subsystem for Linux if you prefer. You will need to install:
 
 - Git
 - Node
